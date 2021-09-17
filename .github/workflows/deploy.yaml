@@ -38,7 +38,8 @@ jobs:
         - name: Test
           run : |
             http_response=$(curl -s -w "%{http_code}" ${{ steps.deploy.outputs.url }})
-            if [ $http_response != "200" ]; then
+            if [ $http_response != "200" ]
+            then
                 echo "Error occured"
                 exit 1
             else
