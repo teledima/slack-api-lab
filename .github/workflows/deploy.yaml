@@ -1,0 +1,46 @@
+name: deploy-app
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+        steps:
+        - name: Checkout
+          uses: actions/checkout@v2
+
+        - name: Set outputs
+          id : vars
+          run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+
+        - name: Check outputs
+          run : echo ${{ steps.vars.outputs.sha_short }}
+
+        - name: Install Cloud SDK
+          uses: google-github-actions/setup-gcloud@master
+          with:
+            project_id           : ${{ secrets.GCP_PROJECT_ID }}
+            service_account_email: ${{ secrets.GCP_EMAIL }}
+            service_account_key  : ${{ secrets.GCP_SA_KEY }}
+
+        - name: Deploy project to App Engine
+          id  : deploy
+          uses: google-github-actions/deploy-appengine@main
+          with:
+            deliverables: app.yaml
+            project_id  : ${{ secrets.GCP_PROJECT_ID }}
+            credentials : ${{ secrets.GCP_SA_KEY }}
+            version     : ${{ steps.vars.outputs.sha_short }}
+
+        - name: Test
+          run : |
+            http_response=$(curl -s -w "%{http_code}" ${{ steps.deploy.outputs.url }})
+            if [ $http_response != "200" ]; then
+                echo "Error occured"
+                exit 1
+            else
+                echo "Success deploy"
+            fi

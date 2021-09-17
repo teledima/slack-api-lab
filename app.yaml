@@ -1,0 +1,2 @@
+runtime: python38
+entrypoint: gunicorn :8080 app:app
