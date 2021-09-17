@@ -37,10 +37,9 @@ jobs:
 
         - name: Test
           run : |
-            http_response=$(curl -s -w "%{http_code}" ${{ steps.deploy.outputs.url }})
-            if [ $http_response != "200" ]
-            then
-                echo "Error occured"
+            http_code=$(curl -I --silent ${{ steps.deploy.outputs.url }} | head -n 1 | awk -F ' ' '{print $2}')
+            if [ "$http_code" != "200" ]; then
+                echo "Error occured, status=$http_code"
                 exit 1
             else
                 echo "Success deploy"
