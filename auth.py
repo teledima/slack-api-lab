@@ -24,7 +24,7 @@ def install_app():
         # Exchange a temporary OAuth verifier code for an access token
         response = WebClient().oauth_v2_access(client_id=config.client_id,
                                                client_secret=config.client_id,
-                                               code=code)
+                                               code=code).data
         if response['ok']:
             parsed_response = dict(app_id=response['app_id'],
                                    user=dict(id=response['authed_user']['id'],
