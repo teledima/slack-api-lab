@@ -20,3 +20,7 @@ client_id = get_secret_data(secret_manager=secret_manager,
                             project_id=PROJECT_ID, secret_id='client_id', version_id='latest')
 client_secret = get_secret_data(secret_manager=secret_manager,
                                 project_id=PROJECT_ID, secret_id='client_secret', version_id='latest')
+signing_secret = get_secret_data(secret_manager=secret_manager,
+                                 project_id=PROJECT_ID, secret_id='signing_secret', version_id='latest')
+bot_token = get_secret_data(secret_manager=secret_manager,
+                            project_id=PROJECT_ID, secret_id='bot_token', version_id='latest')
