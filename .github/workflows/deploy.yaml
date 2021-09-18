@@ -15,7 +15,7 @@ jobs:
         - name: Environment variables substitute
           uses: danielr1996/envsubst-action@1.0.0
           env :
-               service_account_key : ${{ secrets.GCP_SA_KEY }}
+               service_account_key: ${{ secrets.GCP_SA_KEY }}
                firebase_account_key: ${{ secrets.GCP_FSA_KEY }}
           with:
             input : base.yaml
