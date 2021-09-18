@@ -1,3 +1,6 @@
 flask
 slack-sdk
 gunicorn
+firebase_admin
+google
+google-cloud-secret-manager

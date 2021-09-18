@@ -4,5 +4,5 @@ interaction_blueprint = Blueprint('interaction_blueprint', import_name=__name__)
 
 
 @interaction_blueprint.route('/interaction-endpoint', methods=['POST'])
-def interaction_blueprint():
+def interaction_endpoint():
     pass
