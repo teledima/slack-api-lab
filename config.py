@@ -8,7 +8,11 @@ from google.oauth2 import service_account
 PROJECT_ID = 'api-slack-lab'
 SECRET_MANAGER_SCOPES = ['https://www.googleapis.com/auth/cloud-platform']
 
-firebase_account_key = json.loads(os.getenv('firebase_account_key'))
+try:
+    firebase_account_key = json.loads(os.getenv('firebase_account_key'))
+except TypeError:
+    raise TypeError(os.getenv('firebase_account_key'))
+
 service_account_key = json.loads(os.getenv('service_account_key'))
 
 secret_manager_cred = service_account.Credentials.from_service_account_info(service_account_key,
