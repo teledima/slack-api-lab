@@ -2,6 +2,7 @@ from firebase_admin import firestore
 from flask import Blueprint, render_template, request
 from slack_sdk.oauth import AuthorizeUrlGenerator, RedirectUriPageRenderer
 from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 import config
 
 auth_blueprint = Blueprint(name='auth_blueprint', import_name=__name__)
@@ -22,9 +23,12 @@ def install_app():
     if code:
         finish_page = RedirectUriPageRenderer(install_path='/auth', redirect_uri_path='')
         # Exchange a temporary OAuth verifier code for an access token
-        response = WebClient().oauth_v2_access(client_id=config.client_id,
-                                               client_secret=config.client_id,
-                                               code=code).data
+        try:
+            response = WebClient().oauth_v2_access(client_id=config.client_id,
+                                                   client_secret=config.client_secret,
+                                                   code=code).data
+        except SlackApiError as slack_error:
+            return finish_page.render_failure_page(reason=slack_error.response['error'])
         if response['ok']:
             parsed_response = dict(app_id=response['app_id'],
                                    user=dict(id=response['authed_user']['id'],

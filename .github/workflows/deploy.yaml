@@ -20,9 +20,7 @@ jobs:
           with:
             input : base.yaml
             output: app.yaml
-            
-        - name: Check substitute
-          run: "cat app.yaml"
+
         - name: Set outputs
           id : vars
           run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
