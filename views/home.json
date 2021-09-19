@@ -10,6 +10,7 @@
 		},
 		{
 			"type": "section",
+			"block_id": "user_presence_select",
 			"text": {
 				"type": "mrkdwn",
 				"text": "Пользователь для просмотра активности"
