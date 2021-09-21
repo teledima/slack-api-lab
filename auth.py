@@ -10,9 +10,10 @@ auth_blueprint = Blueprint(name='auth_blueprint', import_name=__name__)
 
 @auth_blueprint.route('/auth', methods=['GET'])
 def auth():
-
-    url_generator = AuthorizeUrlGenerator(client_id=config.client_id,
-                                          scopes=['chat:write'], user_scopes=['users:read'])
+    is_admin = request.args.get('is_admin')
+    user_scopes = ['users:read']
+    user_scopes += ['admin'] if is_admin == 1 else []
+    url_generator = AuthorizeUrlGenerator(client_id=config.client_id, user_scopes=user_scopes)
     return render_template('add_to_slack.html', url=url_generator.generate(state=''))
 
 
@@ -37,7 +38,7 @@ def install_app():
                                              token_type=response['authed_user']['token_type']),
                                    team=dict(id=response['team']['id'],
                                              name=response['team']['name']))
-            db = firestore.client().collection('authed_users')
+            db = firestore.client(app=config.firestore_app).collection('authed_users')
             db.document(response['authed_user']['id']).set(parsed_response)
             return finish_page.render_success_page(app_id=response['app_id'], team_id=response['team']['id'])
         else:

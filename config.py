@@ -1,7 +1,7 @@
 import os
 import json
 
-from secret_manager import get_secret_data
+from utils import get_secret_data
 from google.cloud.secretmanager_v1 import SecretManagerServiceClient
 from google.oauth2 import service_account
 from firebase_admin import credentials, initialize_app
