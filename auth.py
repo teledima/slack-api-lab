@@ -1,3 +1,5 @@
+import json
+
 from flask import Blueprint, render_template, request
 from slack_sdk.oauth import AuthorizeUrlGenerator, RedirectUriPageRenderer
 from slack_sdk import WebClient
@@ -10,7 +12,7 @@ auth_blueprint = Blueprint(name='auth_blueprint', import_name=__name__)
 
 @auth_blueprint.route('/auth', methods=['GET'])
 def auth():
-    user_scopes = ['channels:write', 'groups:write']
+    user_scopes = ['channels:write', 'channels:read', 'groups:write', 'groups:read']
     url_generator = AuthorizeUrlGenerator(client_id=config.client_id, user_scopes=user_scopes)
     return render_template('add_to_slack.html', url=url_generator.generate(state=''))
 
