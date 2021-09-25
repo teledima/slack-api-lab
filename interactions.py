@@ -21,14 +21,19 @@ def interaction_endpoint():
                                           selected_user=payload['user']['id'],
                                           selected_channel=action['selected_channel'])
             elif action['action_id'] == 'create_channel':
-                pass
+                WebClient(config.bot_token).views_open(trigger_id=payload['trigger_id'],
+                                                       view=get_view('views/create_channel_view.json'))
             elif action['action_id'] == 'delete_channel':
                 pass
             elif action['action_id'] == 'edit_channel_name':
                 pass
     elif payload['type'] == 'view_submission':
         callback_id = payload['view']['callback_id']
-        pass
+        if callback_id == 'create_channel_callback':
+            channel_name = payload['view']['state']['values']['channel_name_input_block']['channel_name_input_action']['value']
+            user_created = payload['user']['id']
+
+            return create_channel_handler(channel_name=channel_name, user_created=user_created)
     return make_response('', 200)
 
 
@@ -57,9 +62,32 @@ def channel_selection_handler(view, selected_user, selected_channel):
     [view_blocks.pop(id) for id, item in enumerate(view_blocks)
      if 'block_id' in item and item['block_id'] == 'channel_info_block']
 
+    # insert channel info before control buttons
     view_blocks.insert(-1, channel_info_block)
 
     home_view = get_view('views/home_init.json')
     home_view['blocks'] = view_blocks
 
     WebClient(token=config.bot_token).views_update(view=home_view, view_id=view['id'])
+
+
+def create_channel_handler(channel_name, user_created):
+    user_doc = get_document(db=config.db, collection_id='authed_users', document_id=user_created)
+    try:
+        WebClient(token=user_doc['user']['access_token']).conversations_create(name=channel_name, is_private=False)
+        return make_response('', 200)
+    except SlackApiError as slack_api_error:
+        error_text = 'Произошла ошибка при создании канала: {error_description}'
+        if slack_api_error.response['error'] == 'invalid_name_specials':
+            error_text = error_text.format(
+                error_description='имя содержит недопустимые спец.знаки или символы верхнего регистра')
+        elif slack_api_error.response['error'] == 'invalid_name_punctuation':
+            error_text = error_text.format(error_description='имя содержит только знаки пунктуации')
+        elif slack_api_error.response['error'] == 'name_taken':
+            error_text = error_text.format(error_description='канал с таким именем уже существует')
+        else:
+            error_text = error_text.format(error_description=slack_api_error.response['error'])
+
+        error_response = dict(response_action='errors',
+                              errors=dict(channel_name_input_block=error_text))
+        return jsonify(error_response), 200
