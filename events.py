@@ -39,4 +39,4 @@ def event_endpoint(event_data):
                               f'Для работы в панели необходимо пройти авторизацию в приложении по ссылке:{request.host_url + "auth"}',
                          block_id='need_authorization_block').to_dict()
         ]
-    WebClient(config.bot_token).views_publish(user_id=user_id_opened, view=home_view_init)
+    config.bot_client.views_publish(user_id=user_id_opened, view=home_view_init)

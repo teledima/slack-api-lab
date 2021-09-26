@@ -14,25 +14,28 @@ interaction_blueprint = Blueprint('interaction_blueprint', import_name=__name__)
 @interaction_blueprint.route('/interaction-endpoint', methods=['POST'])
 def interaction_endpoint():
     payload = json.loads(request.form['payload'])
+
+    user_dor = get_document(
+        db=config.db, collection_id='authed_users', document_id=payload['user']['id']
+    )
+    user_client = WebClient(token=user_dor['user']['access_token'])
+
     if payload['type'] == 'block_actions':
         for action in payload['actions']:
             if action['action_id'] == 'channel_select_action':
                 channel_selection_handler(view=payload['view'],
-                                          selected_user=payload['user']['id'],
+                                          user_client=user_client,
                                           selected_channel=action['selected_channel'])
             elif action['action_id'] == 'create_channel':
-                WebClient(config.bot_token).views_open(trigger_id=payload['trigger_id'],
-                                                       view=get_view('views/create_channel_view.json'))
+                config.bot_client.views_open(trigger_id=payload['trigger_id'],
+                                             view=get_view('views/create_channel_view.json'))
             elif action['action_id'] == 'archive_channel':
                 # check that channel selected
                 selected_channel = payload['view']['state']['values']['channel_select_block']['channel_select_action'][
                     'selected_channel']
 
-                user_dor = get_document(
-                    db=config.db, collection_id='authed_users', document_id=payload['user']['id']
-                )
                 try:
-                    WebClient(user_dor['user']['access_token']).conversations_archive(channel=selected_channel)
+                    user_client.conversations_archive(channel=selected_channel)
                 except SlackApiError:
                     return make_response('', 200)
 
@@ -42,15 +45,14 @@ def interaction_endpoint():
         callback_id = payload['view']['callback_id']
         if callback_id == 'create_channel_callback':
             channel_name = payload['view']['state']['values']['channel_name_input_block']['channel_name_input_action']['value']
-            user_created = payload['user']['id']
+            return channel_handler(action=user_client.conversations_create, channel_name=channel_name,
+                                   is_private=False)
 
-            return create_channel_handler(channel_name=channel_name, user_created=user_created)
     return make_response('', 200)
 
 
-def channel_selection_handler(view, selected_user, selected_channel):
-    user_doc = get_document(db=config.db, collection_id='authed_users', document_id=selected_user)
-    channel_info = WebClient(token=user_doc['user']['access_token']).conversations_info(channel=selected_channel)
+def channel_selection_handler(view, user_client:WebClient, selected_channel):
+    channel_info = user_client.conversations_info(channel=selected_channel)
     if channel_info.data['ok']:
         channel_data = channel_info.data['channel']
         channel_name = ObjectLink(object_id=channel_data['id'], text=channel_data['name'])
@@ -102,13 +104,12 @@ def channel_selection_handler(view, selected_user, selected_channel):
     home_view = get_view('views/home_init.json')
     home_view['blocks'] = view_blocks
 
-    WebClient(token=config.bot_token).views_update(view=home_view, view_id=view['id'])
+    config.bot_client.views_update(view=home_view, view_id=view['id'])
 
 
-def create_channel_handler(channel_name, user_created):
-    user_doc = get_document(db=config.db, collection_id='authed_users', document_id=user_created)
+def channel_handler(action, channel_name, **kwargs):
     try:
-        WebClient(token=user_doc['user']['access_token']).conversations_create(name=channel_name, is_private=False)
+        action(name=channel_name, **kwargs)
         return make_response('', 200)
     except SlackApiError as slack_api_error:
         error_text = 'Произошла ошибка при создании канала: {error_description}'
