@@ -114,7 +114,7 @@ def channel_handler(action, **kwargs):
         action(**kwargs)
         return make_response('', 200)
     except SlackApiError as slack_api_error:
-        error_text = 'Произошла ошибка при создании канала: {error_description}'
+        error_text = 'Произошла ошибка: {error_description}'
         if slack_api_error.response['error'] == 'invalid_name_specials':
             error_text = error_text.format(
                 error_description='имя содержит недопустимые спец.знаки или символы верхнего регистра')

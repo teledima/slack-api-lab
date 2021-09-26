@@ -19,6 +19,7 @@ def auth():
 def install_app():
     # Get temporary code
     code = request.args.get('code')
+    error = request.args.get('error')
     if code:
         finish_page = RedirectUriPageRenderer(install_path='/auth', redirect_uri_path='')
         # Exchange a temporary OAuth verifier code for an access token
@@ -28,19 +29,21 @@ def install_app():
                                                    code=code).data
         except SlackApiError as slack_error:
             return finish_page.render_failure_page(reason=slack_error.response['error'])
-        if response['ok']:
-            parsed_response = dict(app_id=response['app_id'],
-                                   user=dict(id=response['authed_user']['id'],
-                                             scope=response['authed_user']['scope'],
-                                             access_token=response['authed_user']['access_token'],
-                                             token_type=response['authed_user']['token_type']),
-                                   team=dict(id=response['team']['id'],
-                                             name=response['team']['name']))
 
-            set_document(db=config.db,
-                         collection_id='authed_users',
-                         document_id=response['authed_user']['id'],
-                         content=parsed_response)
-            return finish_page.render_success_page(app_id=response['app_id'], team_id=response['team']['id'])
-        else:
-            return finish_page.render_failure_page(reason=response['error'])
+    if response:
+        parsed_response = dict(app_id=response['app_id'],
+                               user=dict(id=response['authed_user']['id'],
+                                         scope=response['authed_user']['scope'],
+                                         access_token=response['authed_user']['access_token'],
+                                         token_type=response['authed_user']['token_type']),
+                               team=dict(id=response['team']['id'],
+                                         name=response['team']['name']))
+
+        set_document(db=config.db,
+                     collection_id='authed_users',
+                     document_id=response['authed_user']['id'],
+                     content=parsed_response)
+        return finish_page.render_success_page(app_id=response['app_id'], team_id=response['team']['id'])
+
+    if error:
+        return finish_page.render_failure_page(reason=error)
