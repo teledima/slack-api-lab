@@ -1,10 +1,6 @@
-import json
-
 from flask import Blueprint, request
 from slackeventsapi import SlackEventAdapter
-from slack_sdk import WebClient
-from slack_sdk.models.blocks import SectionBlock, ChannelSelectElement, ActionsBlock, ButtonElement, ConfirmObject
-from firebase_admin import firestore
+from slack_sdk.models.blocks import SectionBlock, ChannelSelectElement, ActionsBlock, ButtonElement
 from utils import get_view, get_document
 
 import config
