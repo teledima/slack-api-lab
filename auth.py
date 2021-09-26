@@ -1,5 +1,3 @@
-import json
-
 from flask import Blueprint, render_template, request
 from slack_sdk.oauth import AuthorizeUrlGenerator, RedirectUriPageRenderer
 from slack_sdk import WebClient
