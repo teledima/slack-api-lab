@@ -1,9 +1,11 @@
 import os
 import json
 
-from secret_manager import get_secret_data
+from utils import get_secret_data
 from google.cloud.secretmanager_v1 import SecretManagerServiceClient
 from google.oauth2 import service_account
+from firebase_admin import credentials, initialize_app, firestore
+from slack_sdk import WebClient
 
 PROJECT_ID = 'api-slack-lab'
 SECRET_MANAGER_SCOPES = ['https://www.googleapis.com/auth/cloud-platform']
@@ -11,6 +13,12 @@ SECRET_MANAGER_SCOPES = ['https://www.googleapis.com/auth/cloud-platform']
 
 firebase_account_key = json.loads(os.getenv('FIREBASE_ACCOUNT_KEY'))
 service_account_key = json.loads(os.getenv('SERVICE_ACCOUNT_KEY'))
+
+db = firestore.client(
+    initialize_app(
+        credentials.Certificate(firebase_account_key)
+    )
+)
 
 secret_manager_cred = service_account.Credentials.from_service_account_info(service_account_key,
                                                                             scopes=SECRET_MANAGER_SCOPES)
@@ -20,3 +28,9 @@ client_id = get_secret_data(secret_manager=secret_manager,
                             project_id=PROJECT_ID, secret_id='client_id', version_id='latest')
 client_secret = get_secret_data(secret_manager=secret_manager,
                                 project_id=PROJECT_ID, secret_id='client_secret', version_id='latest')
+signing_secret = get_secret_data(secret_manager=secret_manager,
+                                 project_id=PROJECT_ID, secret_id='signing_secret', version_id='latest')
+bot_token = get_secret_data(secret_manager=secret_manager,
+                            project_id=PROJECT_ID, secret_id='bot_token', version_id='latest')
+
+bot_client = WebClient(token=bot_token)

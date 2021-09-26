@@ -1,8 +1,10 @@
-from firebase_admin import firestore
+import json
+
 from flask import Blueprint, render_template, request
 from slack_sdk.oauth import AuthorizeUrlGenerator, RedirectUriPageRenderer
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
+from utils import set_document
 import config
 
 auth_blueprint = Blueprint(name='auth_blueprint', import_name=__name__)
@@ -10,9 +12,8 @@ auth_blueprint = Blueprint(name='auth_blueprint', import_name=__name__)
 
 @auth_blueprint.route('/auth', methods=['GET'])
 def auth():
-
-    url_generator = AuthorizeUrlGenerator(client_id=config.client_id,
-                                          scopes=['chat:write'], user_scopes=['users:read'])
+    user_scopes = ['channels:write', 'channels:read', 'groups:write', 'groups:read']
+    url_generator = AuthorizeUrlGenerator(client_id=config.client_id, user_scopes=user_scopes)
     return render_template('add_to_slack.html', url=url_generator.generate(state=''))
 
 
@@ -37,8 +38,11 @@ def install_app():
                                              token_type=response['authed_user']['token_type']),
                                    team=dict(id=response['team']['id'],
                                              name=response['team']['name']))
-            db = firestore.client().collection('authed_users')
-            db.document(response['authed_user']['id']).set(parsed_response)
+
+            set_document(db=config.db,
+                         collection_id='authed_users',
+                         document_id=response['authed_user']['id'],
+                         content=parsed_response)
             return finish_page.render_success_page(app_id=response['app_id'], team_id=response['team']['id'])
         else:
             return finish_page.render_failure_page(reason=response['error'])
