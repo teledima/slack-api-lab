@@ -3,7 +3,7 @@ import json
 from flask import Blueprint, request
 from slackeventsapi import SlackEventAdapter
 from slack_sdk import WebClient
-from slack_sdk.models.blocks import SectionBlock, ChannelSelectElement, ActionsBlock, ButtonElement
+from slack_sdk.models.blocks import SectionBlock, ChannelSelectElement, ActionsBlock, ButtonElement, ConfirmObject
 from firebase_admin import firestore
 from utils import get_view, get_document
 
@@ -30,9 +30,7 @@ def event_endpoint(event_data):
                          accessory=ChannelSelectElement(placeholder='Название канала', action_id='channel_select_action'),
                          block_id='channel_select_block').to_dict(),
             ActionsBlock(elements=[
-                ButtonElement(text="Создать канал", style='primary', action_id='create_channel'),
-                ButtonElement(text="Удалить канал", style='danger', action_id='delete_channel'),
-                ButtonElement(text="Изменить название канала", action_id='edit_channel_name')
+                ButtonElement(text="Создать канал", style='primary', action_id='create_channel')
             ], block_id='control_buttons').to_dict()
         ]
     else:

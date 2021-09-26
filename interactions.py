@@ -1,7 +1,7 @@
 import json
 from flask import Blueprint, request, make_response, jsonify
 from slack_sdk import WebClient
-from slack_sdk.models.blocks import PlainTextObject, SectionBlock, ActionsBlock, ButtonElement
+from slack_sdk.models.blocks import PlainTextObject, SectionBlock, ActionsBlock, ButtonElement, ConfirmObject
 from slack_sdk.models.messages import ObjectLink
 from slack_sdk.errors import SlackApiError
 import config
@@ -23,8 +23,19 @@ def interaction_endpoint():
             elif action['action_id'] == 'create_channel':
                 WebClient(config.bot_token).views_open(trigger_id=payload['trigger_id'],
                                                        view=get_view('views/create_channel_view.json'))
-            elif action['action_id'] == 'delete_channel':
-                pass
+            elif action['action_id'] == 'archive_channel':
+                # check that channel selected
+                selected_channel = payload['view']['state']['values']['channel_select_block']['channel_select_action'][
+                    'selected_channel']
+
+                user_dor = get_document(
+                    db=config.db, collection_id='authed_users', document_id=payload['user']['id']
+                )
+                try:
+                    WebClient(user_dor['user']['access_token']).conversations_archive(channel=selected_channel)
+                except SlackApiError:
+                    return make_response('', 200)
+
             elif action['action_id'] == 'edit_channel_name':
                 pass
     elif payload['type'] == 'view_submission':
@@ -60,10 +71,33 @@ def channel_selection_handler(view, selected_user, selected_channel):
 
     # remove old channel info blocks
     [view_blocks.pop(id) for id, item in enumerate(view_blocks)
-     if 'block_id' in item and item['block_id'] == 'channel_info_block']
+     if ('block_id' in item and item['block_id'] == 'channel_info_block')]
+
+    # find old delete and edit buttons
+    if 'elements' in view_blocks[-1] and \
+       'block_id' in view_blocks[-1] and view_blocks[-1]['block_id'] == 'control_buttons':
+
+        delete_element_id = [id for id, item in enumerate(view_blocks[-1]['elements'])
+                             if item['action_id'] == 'archive_channel']
 
     # insert channel info before control buttons
     view_blocks.insert(-1, channel_info_block)
+
+    delete_text = f'Вы действительно хотите архивировать канал {channel_name}?'
+    # if id exist then update
+    if delete_element_id:
+        view_blocks[-1]['elements'][delete_element_id.pop()]['confirm']['text']['text'] = delete_text
+    # else insert
+    else:
+        # insert delete and change buttons
+        view_blocks[-1]['elements'] += [
+            ButtonElement(text="Архивировать канал", style='danger', action_id='archive_channel',
+                          confirm=ConfirmObject(title='Удаление канала',
+                                                text=delete_text,
+                                                deny='Нет, я передумал', confirm='Да',
+                                                style='danger')).to_dict(),
+            ButtonElement(text="Изменить название канала", action_id='edit_channel_name').to_dict()
+        ]
 
     home_view = get_view('views/home_init.json')
     home_view['blocks'] = view_blocks
