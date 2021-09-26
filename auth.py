@@ -17,6 +17,7 @@ def auth():
 
 @auth_blueprint.route('/install', methods=['GET'])
 def install_app():
+    response = None
     # Get temporary code
     code = request.args.get('code')
     error = request.args.get('error')
