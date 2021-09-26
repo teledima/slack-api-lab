@@ -96,7 +96,7 @@ def channel_selection_handler(view, user_client: WebClient, selected_channel):
         # insert delete and change buttons
         view_blocks[-1]['elements'] += [
             ButtonElement(text="Архивировать канал", style='danger', action_id='archive_channel',
-                          confirm=ConfirmObject(title='Удаление канала',
+                          confirm=ConfirmObject(title='Архивирование канала',
                                                 text=delete_text,
                                                 deny='Нет, я передумал', confirm='Да',
                                                 style='danger')).to_dict(),
