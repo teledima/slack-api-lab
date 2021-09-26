@@ -21,6 +21,7 @@ def event_endpoint(event_data):
     user_doc = get_document(config.db, collection_id='authed_users', document_id=user_id_opened)
 
     text = 'Добро пожаловать в панель управления каналами!\n'
+    # if user_doc exist then user is authenticated
     if user_doc:
         home_view_init['blocks'] += [
             SectionBlock(text=text +
@@ -33,6 +34,7 @@ def event_endpoint(event_data):
                 ButtonElement(text="Создать канал", style='primary', action_id='create_channel')
             ], block_id='control_buttons').to_dict()
         ]
+    # otherwise, we first authenticate
     else:
         home_view_init['blocks'] += [
             SectionBlock(text=text +

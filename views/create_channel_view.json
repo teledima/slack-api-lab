@@ -1,35 +1,6 @@
 {
 	"type": "modal",
-	"callback_id": "create_channel_callback",
-	"title": {
-		"type": "plain_text",
-		"text": "Форма создания канала",
-		"emoji": true
-	},
-	"submit": {
-		"type": "plain_text",
-		"text": "Создать канал",
-		"emoji": true
-	},
-	"close": {
-		"type": "plain_text",
-		"text": "Отменить",
-		"emoji": true
-	},
 	"blocks": [
-		{
-			"type": "input",
-			"block_id": "channel_name_input_block",
-			"element": {
-				"type": "plain_text_input",
-				"max_length": 80,
-				"action_id": "channel_name_input_action"
-			},
-			"label": {
-				"type": "plain_text",
-				"text": "Название канала",
-				"emoji": true
-			}
-		}
+
 	]
 }

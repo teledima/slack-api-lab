@@ -1,7 +1,7 @@
 import json
 from flask import Blueprint, request, make_response, jsonify
 from slack_sdk import WebClient
-from slack_sdk.models.blocks import PlainTextObject, SectionBlock, ActionsBlock, ButtonElement, ConfirmObject
+from slack_sdk.models.blocks import PlainTextObject, SectionBlock, InputBlock, ButtonElement, ConfirmObject, PlainTextInputElement
 from slack_sdk.models.messages import ObjectLink
 from slack_sdk.errors import SlackApiError
 import config
@@ -20,48 +20,50 @@ def interaction_endpoint():
     )
     user_client = WebClient(token=user_dor['user']['access_token'])
 
+    # handle interactions in blocks
     if payload['type'] == 'block_actions':
         for action in payload['actions']:
+            selected_channel = payload['view']['state']['values']['channel_select_block']['channel_select_action']['selected_channel']
             if action['action_id'] == 'channel_select_action':
                 channel_selection_handler(view=payload['view'],
                                           user_client=user_client,
                                           selected_channel=action['selected_channel'])
             elif action['action_id'] == 'create_channel':
                 config.bot_client.views_open(trigger_id=payload['trigger_id'],
-                                             view=get_view('views/create_channel_view.json'))
+                                             view=channel_view_construct(type_view='create'))
             elif action['action_id'] == 'archive_channel':
-                # check that channel selected
-                selected_channel = payload['view']['state']['values']['channel_select_block']['channel_select_action'][
-                    'selected_channel']
-
                 try:
                     user_client.conversations_archive(channel=selected_channel)
                 except SlackApiError:
+                    # if there is an error, then simply suppress the error
                     return make_response('', 200)
 
             elif action['action_id'] == 'edit_channel_name':
-                pass
+                channel_data = user_client.conversations_info(channel=selected_channel).data['channel']
+                config.bot_client.views_open(trigger_id=payload['trigger_id'],
+                                             view=channel_view_construct(type_view='update_name',
+                                                                         initial_value=channel_data['name'],
+                                                                         channel_id=channel_data['id']))
+    # handle interaction in custom views
     elif payload['type'] == 'view_submission':
         callback_id = payload['view']['callback_id']
+        selected_channel = payload['view']['private_metadata']
+        channel_name = payload['view']['state']['values']['channel_name_input_block']['channel_name_input_action']['value']
         if callback_id == 'create_channel_callback':
-            channel_name = payload['view']['state']['values']['channel_name_input_block']['channel_name_input_action']['value']
-            return channel_handler(action=user_client.conversations_create, channel_name=channel_name,
-                                   is_private=False)
+            return channel_handler(action=user_client.conversations_create, name=channel_name, is_private=False)
+        elif callback_id == 'change_channel_name_callback':
+            return channel_handler(action=user_client.conversations_rename, channel=selected_channel, name=channel_name)
 
     return make_response('', 200)
 
 
-def channel_selection_handler(view, user_client:WebClient, selected_channel):
-    channel_info = user_client.conversations_info(channel=selected_channel)
-    if channel_info.data['ok']:
-        channel_data = channel_info.data['channel']
-        channel_name = ObjectLink(object_id=channel_data['id'], text=channel_data['name'])
-        created_time = dt.fromtimestamp(int(channel_data['created'])).strftime('%H:%M:%S %Y-%m-%d')
-        previous_names = ','.join(channel_data['previous_names'])
-        topic = channel_data['topic']['value']
-        purpose = channel_data['purpose']['value']
-    else:
-        raise SlackApiError(message='Error while getting channel info', response=channel_info)
+def channel_selection_handler(view, user_client: WebClient, selected_channel):
+    channel_data = user_client.conversations_info(channel=selected_channel).data['channel']
+    channel_name = ObjectLink(object_id=channel_data['id'], text=channel_data['name'])
+    created_time = dt.fromtimestamp(int(channel_data['created'])).strftime('%H:%M:%S %Y-%m-%d')
+    previous_names = ','.join(channel_data['previous_names'])
+    topic = channel_data['topic']['value']
+    purpose = channel_data['purpose']['value']
 
     channel_info_block = SectionBlock(text=f'Название канала: {channel_name}\n'
                                            f'Дата создания: {created_time}\n'
@@ -107,9 +109,9 @@ def channel_selection_handler(view, user_client:WebClient, selected_channel):
     config.bot_client.views_update(view=home_view, view_id=view['id'])
 
 
-def channel_handler(action, channel_name, **kwargs):
+def channel_handler(action, **kwargs):
     try:
-        action(name=channel_name, **kwargs)
+        action(**kwargs)
         return make_response('', 200)
     except SlackApiError as slack_api_error:
         error_text = 'Произошла ошибка при создании канала: {error_description}'
@@ -126,3 +128,32 @@ def channel_handler(action, channel_name, **kwargs):
         error_response = dict(response_action='errors',
                               errors=dict(channel_name_input_block=error_text))
         return jsonify(error_response), 200
+
+
+def channel_view_construct(type_view, initial_value=None, channel_id=None):
+    view_init = get_view('views/create_channel_view.json')
+
+    input_block = InputBlock(
+        block_id='channel_name_input_block', label='Название канала',
+        element=PlainTextInputElement(action_id='channel_name_input_action',
+                                      max_length=80,
+                                      initial_value=initial_value)).to_dict()
+
+    if type_view == 'create':
+        view_init['callback_id'] = 'create_channel_callback'
+        view_init['title'] = PlainTextObject(text='Создание канала').to_dict()
+        view_init['submit'] = PlainTextObject(text='Создать канал').to_dict()
+        view_init['close'] = PlainTextObject(text='Отменить').to_dict()
+        view_init['blocks'].append(input_block)
+    elif type_view == 'update_name':
+        view_init['callback_id'] = 'change_channel_name_callback'
+        view_init['title'] = PlainTextObject(text='Редактирование канала').to_dict()
+        view_init['submit'] = PlainTextObject(text='Изменить название').to_dict()
+        view_init['close'] = PlainTextObject(text='Отменить').to_dict()
+        # set channel id to metadata because we can not read parent view while submission
+        view_init['private_metadata'] = channel_id
+        view_init['blocks'].append(input_block)
+    else:
+        return None
+
+    return view_init
