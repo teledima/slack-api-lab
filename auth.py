@@ -18,11 +18,11 @@ def auth():
 @auth_blueprint.route('/install', methods=['GET'])
 def install_app():
     response = None
+    finish_page = RedirectUriPageRenderer(install_path='/auth', redirect_uri_path='')
     # Get temporary code
     code = request.args.get('code')
     error = request.args.get('error')
     if code:
-        finish_page = RedirectUriPageRenderer(install_path='/auth', redirect_uri_path='')
         # Exchange a temporary OAuth verifier code for an access token
         try:
             response = WebClient().oauth_v2_access(client_id=config.client_id,
