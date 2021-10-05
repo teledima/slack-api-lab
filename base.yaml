@@ -3,3 +3,4 @@ entrypoint: gunicorn -b :8080 main:app
 env_variables:
   SERVICE_ACCOUNT_KEY: '${service_account_key}'
   FIREBASE_ACCOUNT_KEY: '${firebase_account_key}'
+  ENCRYPTION_KEY: '${encryption_key}'

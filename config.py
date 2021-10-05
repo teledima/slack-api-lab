@@ -13,6 +13,11 @@ SECRET_MANAGER_SCOPES = ['https://www.googleapis.com/auth/cloud-platform']
 
 firebase_account_key = json.loads(os.getenv('FIREBASE_ACCOUNT_KEY'))
 service_account_key = json.loads(os.getenv('SERVICE_ACCOUNT_KEY'))
+encryption_key = bytes(
+    list(
+        map(int, os.getenv('ENCRYPTION_KEY').split(','))
+    )
+)
 
 db = firestore.client(
     initialize_app(
