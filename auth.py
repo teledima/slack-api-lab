@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request
 from slack_sdk.oauth import AuthorizeUrlGenerator, RedirectUriPageRenderer
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
-from utils import set_document
+from utils import set_document, encrypt_data
 import config
 
 auth_blueprint = Blueprint(name='auth_blueprint', import_name=__name__)
@@ -32,10 +32,11 @@ def install_app():
             return finish_page.render_failure_page(reason=slack_error.response['error'])
 
     if response:
+        nonce, encoded_data, tag = encrypt_data(key=config.encryption_key, data=bytes(response['authed_user']['access_token'], encoding='utf-8'))
         parsed_response = dict(app_id=response['app_id'],
                                user=dict(id=response['authed_user']['id'],
                                          scope=response['authed_user']['scope'],
-                                         access_token=response['authed_user']['access_token'],
+                                         access_token=dict(nonce=list(nonce), encoded_data=list(encoded_data), tag=list(tag)),
                                          token_type=response['authed_user']['token_type']),
                                team=dict(id=response['team']['id'],
                                          name=response['team']['name']))

@@ -30,7 +30,7 @@ def encrypt_data(key: bytes, data: bytes):
     return aes_cipher.nonce, encoded_data, tag
 
 
-def decrypt_token(key: bytes, nonce: bytes, encoded_data: bytes, tag: bytes):
+def decrypt_data(key: bytes, nonce: bytes, encoded_data: bytes, tag: bytes):
     aes_cipher = AES.new(key=key, mode=AES.MODE_EAX, nonce=nonce)
     decoded_data = aes_cipher.decrypt(encoded_data)
     try:

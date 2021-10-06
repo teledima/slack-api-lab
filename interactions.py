@@ -6,7 +6,7 @@ from slack_sdk.models.messages import ObjectLink
 from slack_sdk.errors import SlackApiError
 import config
 from datetime import datetime as dt
-from utils import get_view, get_document
+from utils import get_view, get_document, decrypt_data
 
 interaction_blueprint = Blueprint('interaction_blueprint', import_name=__name__)
 
@@ -18,7 +18,15 @@ def interaction_endpoint():
     user_dor = get_document(
         db=config.db, collection_id='authed_users', document_id=payload['user']['id']
     )
-    user_client = WebClient(token=user_dor['user']['access_token'])
+    access_token = user_dor['user']['access_token']
+    nonce = bytes(access_token['nonce'])
+    encoded_data = bytes(access_token['encoded_data'])
+    tag = bytes(access_token['tag'])
+
+    decoded_data = decrypt_data(key=config.encryption_key, nonce=nonce, encoded_data=encoded_data, tag=tag)
+    token = decoded_data.decode(encoding='utf-8')
+
+    user_client = WebClient(token=token)
 
     # handle interactions in blocks
     if payload['type'] == 'block_actions':
