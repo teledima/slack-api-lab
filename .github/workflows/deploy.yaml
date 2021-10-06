@@ -17,6 +17,7 @@ jobs:
           env :
                service_account_key: ${{ secrets.GCP_SA_KEY }}
                firebase_account_key: ${{ secrets.GCP_FSA_KEY }}
+               encryption_key: ${{ secrets.ENCRYPTION_KEY }}
           with:
             input : base.yaml
             output: app.yaml
